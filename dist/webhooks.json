@@ -1,0 +1,79 @@
+[
+  {
+    "name": "user-events",
+    "description": "Receives user events from external systems",
+    "querySchema": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "headerSchema": {
+      "type": "object",
+      "properties": {
+        "x-api-key": {
+          "type": "string"
+        },
+        "content-type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "x-api-key"
+      ],
+      "additionalProperties": false
+    },
+    "bodySchema": {
+      "type": "object",
+      "properties": {
+        "eventType": {
+          "type": "string",
+          "enum": [
+            "signup",
+            "update",
+            "delete"
+          ]
+        },
+        "userId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string",
+          "format": "email"
+        },
+        "name": {
+          "type": "string"
+        },
+        "phoneNumber": {
+          "type": "string"
+        },
+        "channelId": {
+          "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "timestamp": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "eventType",
+        "userId",
+        "email",
+        "timestamp"
+      ],
+      "additionalProperties": false
+    },
+    "execute": "async (event: any) => {\n    const { query, headers, body } = event;\n    console.log(`📥 Received ${body?.eventType} event for user:`, body?.email);\n    console.log(`📍 Source:`, query?.source || 'unknown');\n\n    // Security: Validate API key (in production, use env variable)\n    const expectedKey = process.env.WEBHOOK_API_KEY || 'your-secret-key';\n    if (headers?.['x-api-key'] !== expectedKey) {\n      throw new Error('Invalid API key');\n    }\n\n    // Store the event in custom data collection\n    const eventData = {\n      ...body,\n      source: query?.source,\n      receivedAt: new Date().toISOString(),\n      processed: false\n    };\n\n    const result = await Data.create('user-events', eventData, \n      `${body?.eventType} ${body?.email} ${body?.name || ''}`\n    );\n\n    console.log('✅ Event stored successfully:', result.id);\n\n    // Example: Send welcome template on signup using Templates API\n    // Uses Templates.whatsapp namespace for WhatsApp templates\n    let templateResult = null;\n    if (body?.eventType === 'signup' && body?.phoneNumber && body?.channelId) {\n      try {\n        // Search for a welcome template\n        const response = await Templates.whatsapp.list(body.channelId, { search: 'welcome' });\n        const welcomeTemplate = response.templates.find((t: any) => t.status === 'APPROVED');\n        \n        if (welcomeTemplate) {\n          // Send the template message\n          templateResult = await Templates.whatsapp.send(body.channelId, welcomeTemplate.id, {\n            phoneNumbers: [body.phoneNumber],\n            values: {\n              body: { name: body.name || 'there' }\n            }\n          });\n          console.log('📱 Welcome template sent:', templateResult.results[0]?.messages[0]?.id);\n        }\n      } catch (error: any) {\n        console.log('⚠️ Could not send welcome template:', error.message);\n      }\n    }\n\n    // Return success response\n    return {\n      success: true,\n      eventId: result.id,\n      userId: body?.userId,\n      templateSent: templateResult?.totalErrors === 0,\n      timestamp: new Date().toISOString()\n    };\n  }",
+    "executeFunction": "async (event: any) => {\n    const { query, headers, body } = event;\n    console.log(`📥 Received ${body?.eventType} event for user:`, body?.email);\n    console.log(`📍 Source:`, query?.source || 'unknown');\n\n    // Security: Validate API key (in production, use env variable)\n    const expectedKey = process.env.WEBHOOK_API_KEY || 'your-secret-key';\n    if (headers?.['x-api-key'] !== expectedKey) {\n      throw new Error('Invalid API key');\n    }\n\n    // Store the event in custom data collection\n    const eventData = {\n      ...body,\n      source: query?.source,\n      receivedAt: new Date().toISOString(),\n      processed: false\n    };\n\n    const result = await Data.create('user-events', eventData, \n      `${body?.eventType} ${body?.email} ${body?.name || ''}`\n    );\n\n    console.log('✅ Event stored successfully:', result.id);\n\n    // Example: Send welcome template on signup using Templates API\n    // Uses Templates.whatsapp namespace for WhatsApp templates\n    let templateResult = null;\n    if (body?.eventType === 'signup' && body?.phoneNumber && body?.channelId) {\n      try {\n        // Search for a welcome template\n        const response = await Templates.whatsapp.list(body.channelId, { search: 'welcome' });\n        const welcomeTemplate = response.templates.find((t: any) => t.status === 'APPROVED');\n        \n        if (welcomeTemplate) {\n          // Send the template message\n          templateResult = await Templates.whatsapp.send(body.channelId, welcomeTemplate.id, {\n            phoneNumbers: [body.phoneNumber],\n            values: {\n              body: { name: body.name || 'there' }\n            }\n          });\n          console.log('📱 Welcome template sent:', templateResult.results[0]?.messages[0]?.id);\n        }\n      } catch (error: any) {\n        console.log('⚠️ Could not send welcome template:', error.message);\n      }\n    }\n\n    // Return success response\n    return {\n      success: true,\n      eventId: result.id,\n      userId: body?.userId,\n      templateSent: templateResult?.totalErrors === 0,\n      timestamp: new Date().toISOString()\n    };\n  }",
+    "code": "H4sIAAAAAAAACn1Va2/bNhT97l9BC4NBAgzrDusGyGCGbHY2o1gTNMGKIQ0SRrqytFKkRl7aNWT994GS3cV57JvEcy7PffJS5bcmIxTWYJAReUraESEjQt68IYuvkAUEgiWQh2ByDTnZwENp7ReS2RxGhKyVI05ePPwNGYocisrApbMNONzOIrY5YCvAi405YHPwmasatK5nlS+zPqgafE9YHgiNs2hx24AolX9E7VkrST1HJk/bwjoaTwypDEHmqOeGtyvAFG/MLQcTanDqQUM6nnas40VvyQ2HaF0VFCeTqGILglImthdPdrtHZ0UwGVbWJCyKaUCiiC1ISZGx8VJkSmvquWKTiRpLaSaT6IQanKBMnuKNOnaEgtxQ5Iqx3Q7Ef0jHZg4wOEN814e5kF6eFtTRtuPJ3R34P2weNCS8XSsdhpC4Zz13LttutqJz3uZQqKAH7euOzereSMDXxjr0ckHng8WVHDrCy9M2/lvezDRg+08At02Rl6BycD41/MHm2xQ66WeZNd5qENqu6P3n0L49/2HxriMfIYNqDTn5rgUpTdD657WtcjJNQfT9dr1toCP9JymsI8GDS+/5c3KtKs34Y5lkkPl13pErG1wGacIpHhui8D3EdrskmC/GbkzCZn2pZONsBt4LMGvxafHL7xcX7+/OLpd37xd/7XbJ1gZ34iFzgCdfYJvMqoJSc3y7uUm+nqim6gm3bCylYlg6uyEGNmThnHU0WZq10lVOzi6XJPIG+Uq2Qgjgg3vpK25zt8/fGabxyrlCoEygXV5dXKGrzIoyvo8D8nT8tuNaqo2qMFKVyBxEiyRm9aRPsk94xe//vxovoTH9EaHPIKPqPr1Jd89mT+rz/U/Td2TRF9ejdZATH7LobBG03qYJ16LKh4Rk/bV9ll/3jUkpE1+tTGiSyYTCuCdOJiCa0hr4EOoHcOwYyUplDOhlzhi6bRu1gqRDkq6hbrRC8GJTKvSqaYSuPNJHVrz1oFxWpskGdGZrSDrGBH4zLCqT07U8XQuPCoOPHp5dXn68+HMxT9gsTCY0k6+qeTD5kVoQVc7bR9H49OYoulvej7hP23742pj+fRV2uwRLcJB0XffiqJy/7cinIQpyiIB4MBgnp5HUykw48EGjv5nesuMyWFGD92oFL2BNLCPrMoVZSWvWPm2DH8+mn8P5YnpOfrVB58RYjLpxlxx7kya8Puiwbnj02n3PpOMp7zthmaexb3js6mWePmuX4Zwf7ryKAdLsmJUJtKh0P6M+ttWUY1WDR1U3r45a1/FreTUbfVuPvwH2qxH2a/KwEUjhbE32D+uIkJgPPLDODyRJjl9gsX+gyW73BJk9W8ibCsteOpiqqCDfP6HDmhoRst8XQ+M9Ed5v+tmoY/8Chp8Mo/wHAAA="
+  }
+]
