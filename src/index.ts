@@ -33,11 +33,7 @@ My communication style is direct, compelling, and results-focused. I present San
 
 async function main() {
     try {
-        console.log("🚀 Starting Sankalp's Career Champion Agent...");
-        console.log("💼 Ready to advocate for Sankalp's hiring!");
-        console.log("🎯 Ask me anything about why you should hire Sankalp as your Full Stack Developer");
-        
-        console.log("✅ Agent is now running and ready to fight for Sankalp's career!");
+        console.log("Starting");
     } catch (error) {
         console.error("💥 Unexpected error:", error);
         process.exit(1);
